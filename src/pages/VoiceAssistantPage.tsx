@@ -3,17 +3,24 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, Volume2, Info, MessageSquare, History, MicOff } from 'lucide-react';
 import { knowledgeBase } from '../components/ChatAssistant';
+import { GoogleGenAI } from '@google/genai';
+
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+
 
 const VoiceAssistantPage = () => {
   const { t } = useTranslation();
-  const [isListening, setIsListening] = useState(false);
+  const [, setIsListening] = useState(false);
   const [voiceStep, setVoiceStep] = useState(0); // 0: Idle, 1: Listening, 2: Thinking, 3: Responding
   const [userSpeech, setUserSpeech] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [history, setHistory] = useState<{q: string, a: string}[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
   // Check browser support once
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
   const isSupported = !!SpeechRecognitionAPI;
 
@@ -59,7 +66,8 @@ const VoiceAssistantPage = () => {
     setUserSpeech('');
     setAiResponse('');
 
-    recognition.onresult = (event: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = async (event: any) => {
       const transcript = event.results[0][0].transcript;
       setUserSpeech(transcript);
 
@@ -67,16 +75,39 @@ const VoiceAssistantPage = () => {
       if (event.results[0].isFinal) {
         setVoiceStep(2);
 
-        setTimeout(() => {
-          const answer = getAnswer(transcript);
-          setAiResponse(answer);
-          setVoiceStep(3);
-          setHistory(prev => [{q: transcript, a: answer}, ...prev].slice(0, 5));
-          speakText(answer);
-        }, 1200);
+        if (ai) {
+          try {
+            const response = await ai.models.generateContent({
+              model: 'gemini-2.0-flash',
+              contents: `You are an Election Guide Assistant. Answer the following question about elections in a helpful and accurate manner. Keep it concise. Question: ${transcript}`,
+            });
+            const answer = response.text || "Sorry, I couldn't generate a response.";
+            setAiResponse(answer);
+            setVoiceStep(3);
+            setHistory(prev => [{q: transcript, a: answer}, ...prev].slice(0, 5));
+            speakText(answer);
+          } catch (error) {
+            console.error('Gemini API error:', error);
+            // Fallback
+            const answer = getAnswer(transcript);
+            setAiResponse(answer);
+            setVoiceStep(3);
+            setHistory(prev => [{q: transcript, a: answer}, ...prev].slice(0, 5));
+            speakText(answer);
+          }
+        } else {
+          setTimeout(() => {
+            const answer = getAnswer(transcript);
+            setAiResponse(answer);
+            setVoiceStep(3);
+            setHistory(prev => [{q: transcript, a: answer}, ...prev].slice(0, 5));
+            speakText(answer);
+          }, 1200);
+        }
       }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
       setIsListening(false);
@@ -153,12 +184,13 @@ const VoiceAssistantPage = () => {
                     </>
                   ) : (
                     <>
-                      <div 
+                      <button 
                         onClick={startListening}
-                        className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-primary-500 to-primary-700 text-white rounded-full flex items-center justify-center shadow-2xl shadow-primary-500/30 cursor-pointer hover:scale-110 transition-all duration-300 active:scale-95 group mx-auto animate-glow"
+                        className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-primary-500 to-primary-700 text-white rounded-full flex items-center justify-center shadow-2xl shadow-primary-500/30 cursor-pointer hover:scale-110 transition-all duration-300 active:scale-95 group mx-auto animate-glow border-none"
+                        aria-label="Start listening"
                       >
                         <Mic className="w-8 h-8 sm:w-10 sm:h-10 group-hover:animate-pulse" />
-                      </div>
+                      </button>
                       <div>
                         <h2 className="text-xl sm:text-2xl font-bold mb-2">{t('Ready to listen')}</h2>
                         <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">{t('Tap the microphone to start asking questions.')}</p>
@@ -178,12 +210,13 @@ const VoiceAssistantPage = () => {
                     <div className={`absolute inset-0 bg-primary-500/20 rounded-full animate-ping ${voiceStep === 1 ? 'opacity-100' : 'opacity-0'}`}></div>
                     <div className={`absolute inset-0 border-4 border-primary-500/30 rounded-full ${voiceStep === 2 ? 'animate-spin border-t-primary-500' : ''}`}></div>
                     
-                    <div 
-                      className="w-16 h-16 sm:w-20 sm:h-20 bg-primary-500 text-white rounded-full flex items-center justify-center shadow-xl cursor-pointer"
+                    <button 
+                      className="w-16 h-16 sm:w-20 sm:h-20 bg-primary-500 text-white rounded-full flex items-center justify-center shadow-xl cursor-pointer border-none"
                       onClick={voiceStep === 1 ? stopListening : undefined}
+                      aria-label={voiceStep === 1 ? "Stop listening" : "Listen to response"}
                     >
                       {voiceStep === 1 ? <Mic className="w-6 h-6 sm:w-8 sm:h-8 animate-pulse" /> : <Volume2 className="w-6 h-6 sm:w-8 sm:h-8 animate-bounce" />}
-                    </div>
+                    </button>
                   </div>
 
                   <div className="space-y-4 sm:space-y-6 max-w-xl mx-auto px-2">

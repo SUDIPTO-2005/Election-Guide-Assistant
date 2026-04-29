@@ -16,6 +16,7 @@ import {
 
 const TimelinePage = () => {
   const { t } = useTranslation();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedStage, setSelectedStage] = useState<any>(null);
 
   const stages = [

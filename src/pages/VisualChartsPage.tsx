@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { BarChart2, PieChart, TrendingUp, Users, Map } from 'lucide-react';
+import { BarChart2, PieChart, TrendingUp, Users } from 'lucide-react';
 
 const VisualChartsPage = () => {
   const { t } = useTranslation();

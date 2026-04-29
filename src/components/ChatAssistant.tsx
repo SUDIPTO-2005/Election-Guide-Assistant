@@ -2,6 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { X, Send, Mic, Volume2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
+import { GoogleGenAI } from '@google/genai';
+
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+
 
 interface Message {
   id: string;
@@ -109,7 +114,7 @@ const ChatAssistant = ({ isOpen, onClose }: ChatAssistantProps) => {
     return t(answerKey, { lng: 'en' }); // Always return English response
   };
 
-  const handleSendText = (textToProcess: string) => {
+  const handleSendText = async (textToProcess: string) => {
     if (!textToProcess.trim()) return;
 
     const userMessage: Message = {
@@ -123,19 +128,51 @@ const ChatAssistant = ({ isOpen, onClose }: ChatAssistantProps) => {
     setInput('');
     setIsTyping(true);
 
-    // Simulate network delay for AI
-    setTimeout(() => {
-      const responseText = getAIResponse(textToProcess);
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: responseText,
-        sender: 'ai',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, aiMessage]);
-      setIsTyping(false);
-      speakText(responseText); // Auto-speak AI response
-    }, 1000);
+    if (ai) {
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.0-flash',
+          contents: `You are an Election Guide Assistant. Answer the following question about elections in a helpful and accurate manner. Keep it concise. Question: ${textToProcess}`,
+        });
+        const responseText = response.text || "Sorry, I couldn't generate a response.";
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: responseText,
+          sender: 'ai',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, aiMessage]);
+        setIsTyping(false);
+        speakText(responseText);
+      } catch (error) {
+        console.error('Gemini API error:', error);
+        // Fallback to local KB
+        const responseText = getAIResponse(textToProcess);
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: responseText,
+          sender: 'ai',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, aiMessage]);
+        setIsTyping(false);
+        speakText(responseText);
+      }
+    } else {
+      // Simulate network delay for AI
+      setTimeout(() => {
+        const responseText = getAIResponse(textToProcess);
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: responseText,
+          sender: 'ai',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, aiMessage]);
+        setIsTyping(false);
+        speakText(responseText); // Auto-speak AI response
+      }, 1000);
+    }
   };
 
   const handleSend = () => {
@@ -173,7 +210,11 @@ const ChatAssistant = ({ isOpen, onClose }: ChatAssistantProps) => {
           </div>
         </div>
         <div className="flex gap-2 relative z-10">
-          <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-all duration-200 hover:rotate-90">
+          <button 
+            onClick={onClose} 
+            className="p-2 hover:bg-white/20 rounded-lg transition-all duration-200 hover:rotate-90"
+            aria-label="Close assistant"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -218,6 +259,7 @@ const ChatAssistant = ({ isOpen, onClose }: ChatAssistantProps) => {
             className={`absolute left-2 bottom-2 p-2 rounded-full transition-colors z-10 ${
               isListening ? 'bg-red-500 text-white animate-pulse' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-primary-500'
             }`}
+            aria-label={isListening ? "Stop listening" : "Start listening"}
           >
             <Mic className="w-5 h-5" />
           </button>
@@ -240,6 +282,7 @@ const ChatAssistant = ({ isOpen, onClose }: ChatAssistantProps) => {
             onClick={handleSend}
             disabled={!input.trim() && !isListening}
             className="absolute right-2 bottom-2 p-2 bg-primary-600 text-white rounded-full hover:bg-primary-700 disabled:opacity-50 disabled:hover:bg-primary-600 transition-colors z-10"
+            aria-label="Send message"
           >
             <Send className="w-4 h-4" />
           </button>

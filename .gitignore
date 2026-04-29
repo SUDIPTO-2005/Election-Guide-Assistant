@@ -26,3 +26,8 @@ dist-ssr
 # Firebase
 firebase-debug.log
 .firebase/
+
+# Environment variables & Coverage
+.env
+coverage/
+

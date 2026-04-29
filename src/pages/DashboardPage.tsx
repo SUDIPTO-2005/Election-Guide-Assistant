@@ -2,6 +2,11 @@ import { useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { GoogleGenAI } from '@google/genai';
+
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+
 import { 
   MessageSquare, 
   BookOpen, 
@@ -32,10 +37,12 @@ const DashboardPage = () => {
   const [voiceStep, setVoiceStep] = useState(0);
   const [voiceResponse, setVoiceResponse] = useState('');
   const [userSpeech, setUserSpeech] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
   const progressPercent = Math.round((completedLessons.length / lessons.length) * 100) || 0;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
   const speakText = useCallback((text: string) => {
@@ -66,27 +73,55 @@ const DashboardPage = () => {
     setUserSpeech('');
     setVoiceResponse('');
 
-    recognition.onresult = (event: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = async (event: any) => {
       const transcript = event.results[0][0].transcript;
       setUserSpeech(transcript);
 
       if (event.results[0].isFinal) {
         setVoiceStep(2);
 
-        setTimeout(() => {
-          const normalized = transcript.toLowerCase();
-          let answerKey = 'kb.default';
-          for (const [key, value] of Object.entries(knowledgeBase)) {
-            if (key !== 'default' && normalized.includes(key)) {
-              answerKey = value;
-              break;
+        if (ai) {
+          try {
+            const response = await ai.models.generateContent({
+              model: 'gemini-2.0-flash',
+              contents: `You are an Election Guide Assistant. Answer the following question about elections in a helpful and accurate manner. Keep it concise. Question: ${transcript}`,
+            });
+            const answer = response.text || "Sorry, I couldn't generate a response.";
+            setVoiceResponse(answer);
+            setVoiceStep(3);
+            speakText(answer);
+          } catch (error) {
+            console.error('Gemini API error:', error);
+            const normalized = transcript.toLowerCase();
+            let answerKey = 'kb.default';
+            for (const [key, value] of Object.entries(knowledgeBase)) {
+              if (key !== 'default' && normalized.includes(key)) {
+                answerKey = value;
+                break;
+              }
             }
+            const answer = t(answerKey, { lng: 'en' });
+            setVoiceResponse(answer);
+            setVoiceStep(3);
+            speakText(answer);
           }
-          const answer = t(answerKey, { lng: 'en' });
-          setVoiceResponse(answer);
-          setVoiceStep(3);
-          speakText(answer);
-        }, 1200);
+        } else {
+          setTimeout(() => {
+            const normalized = transcript.toLowerCase();
+            let answerKey = 'kb.default';
+            for (const [key, value] of Object.entries(knowledgeBase)) {
+              if (key !== 'default' && normalized.includes(key)) {
+                answerKey = value;
+                break;
+              }
+            }
+            const answer = t(answerKey, { lng: 'en' });
+            setVoiceResponse(answer);
+            setVoiceStep(3);
+            speakText(answer);
+          }, 1200);
+        }
       }
     };
 
@@ -101,7 +136,7 @@ const DashboardPage = () => {
 
     try {
       recognition.start();
-    } catch (e) {
+    } catch {
       setIsVoiceActive(false);
       setVoiceStep(0);
     }
@@ -309,14 +344,18 @@ const DashboardPage = () => {
           
           <h2 className="font-bold text-[15px] sm:text-[16px] absolute top-4 sm:top-6 left-4 sm:left-6 text-white">{t('Quick Voice Assistant')}</h2>
           
-          <div className="mt-6 sm:mt-8 mb-4 sm:mb-6 relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center cursor-pointer group" onClick={handleVoiceClick}>
+          <button 
+            aria-label="Activate voice assistant"
+            className="mt-6 sm:mt-8 mb-4 sm:mb-6 relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center cursor-pointer group" 
+            onClick={handleVoiceClick}
+          >
             <div className="absolute w-full h-full bg-white/10 rounded-full scale-150 animate-pulse" />
             <div className="absolute w-full h-full bg-white/5 rounded-full scale-[2] animate-pulse-ring" />
             
             <div className="relative w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-full flex items-center justify-center text-primary-600 shadow-2xl group-hover:scale-110 transition-transform duration-300 animate-glow">
               <Mic className="w-6 h-6 sm:w-8 sm:h-8" />
             </div>
-          </div>
+          </button>
           
           <p className="text-xs sm:text-sm text-primary-100 mt-2 whitespace-pre-wrap">
             {t('Tap the mic and ask\nanything about elections')}
@@ -396,6 +435,7 @@ const DashboardPage = () => {
             <button 
               onClick={() => { setIsVoiceActive(false); setVoiceStep(0); }}
               className="absolute top-4 right-4 sm:top-8 sm:right-8 text-white/60 hover:text-white p-2 z-10"
+              aria-label="Close voice assistant"
             >
               <X className="w-6 h-6 sm:w-8 sm:h-8" />
             </button>

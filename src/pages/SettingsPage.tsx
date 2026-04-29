@@ -15,7 +15,7 @@ const SettingsPage = () => {
           </div>
           <select 
             value={theme}
-            onChange={(e) => setTheme(e.target.value as any)}
+            onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}
             className="input-field max-w-full sm:max-w-[150px]"
           >
             <option value="light">Light</option>

@@ -71,7 +71,7 @@ const Sidebar = ({ isMobile = false, onClose }: SidebarProps) => {
       </div>
       
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5 relative z-10">
-        {navItems.map((item, idx) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink
