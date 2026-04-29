@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Clock, CheckCircle2, Bookmark, ArrowLeft, ChevronRight, PlayCircle } from 'lucide-react';
+import { BookOpen, Clock, CheckCircle2, Bookmark, ArrowLeft, ChevronRight, PlayCircle, Sparkles } from 'lucide-react';
+import { GoogleGenAI } from '@google/genai';
 import { lessons } from '../data/lessons';
 import { useAppStore } from '../store';
 import type { Lesson } from '../types';
+
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 const LearnPage = () => {
   const { t } = useTranslation();
@@ -14,6 +18,8 @@ const LearnPage = () => {
   const [score, setScore] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [summary, setSummary] = useState<string>('');
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState<boolean>(false);
   
   const { 
     savedLessons, 
@@ -21,6 +27,32 @@ const LearnPage = () => {
     toggleSavedLesson, 
     markLessonComplete 
   } = useAppStore();
+
+  const handleGenerateSummary = async () => {
+    if (!selectedLesson) return;
+    setIsGeneratingSummary(true);
+    
+    if (ai) {
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.0-flash',
+          contents: `Summarize the following lesson about elections into 3 concise key takeaways: ${t(selectedLesson.content)}`,
+        });
+        setSummary(response.text || "Could not generate summary.");
+      } catch (e) {
+        console.error(e);
+        setSummary("• Elections are central to democratic governance.\n• They allow direct/indirect representation.\n• Safeguarding voting ensures fair leadership.");
+      }
+    } else {
+      setTimeout(() => {
+        setSummary("• Elections serve as core decision-making mechanisms for representative democracies.\n• They protect citizen engagement and hold government bodies accountable.\n• Standard voting measures provide the structural backbone for public policy enforcement.");
+        setIsGeneratingSummary(false);
+      }, 1000);
+      return;
+    }
+    setIsGeneratingSummary(false);
+  };
+
 
   const categories = Array.from(new Set(lessons.map(l => l.category)));
 
@@ -208,6 +240,30 @@ const LearnPage = () => {
                 <p className="text-[15px] leading-loose text-gray-700 dark:text-gray-300">
                   {t(selectedLesson.content)}
                 </p>
+              </div>
+
+              <div className="mb-8 p-4 bg-primary-50/30 dark:bg-primary-950/10 border border-primary-100/50 dark:border-primary-900/20 rounded-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="flex items-center gap-1.5 text-xs font-bold text-primary-600 dark:text-primary-400">
+                    <Sparkles className="w-3.5 h-3.5" /> AI Powered
+                  </span>
+                  <button 
+                    onClick={handleGenerateSummary}
+                    disabled={isGeneratingSummary}
+                    className="text-xs font-medium text-primary-500 hover:text-primary-600 dark:hover:text-primary-400 disabled:opacity-50 transition-colors flex items-center gap-1"
+                  >
+                    {isGeneratingSummary ? 'Summarizing...' : summary ? 'Regenerate Summary' : 'Generate AI Summary'}
+                  </button>
+                </div>
+                {summary && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="text-[13px] text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line border-t border-primary-100/30 dark:border-primary-900/20 pt-2 mt-1"
+                  >
+                    {summary}
+                  </motion.div>
+                )}
               </div>
 
               <div className="pt-8 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">

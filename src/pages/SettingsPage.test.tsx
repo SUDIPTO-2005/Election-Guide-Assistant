@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import SettingsPage from './SettingsPage';
+
+const mockLogin = vi.fn();
+const mockRegister = vi.fn();
+const mockLogout = vi.fn();
 
 vi.mock('../store', () => ({
   useAppStore: () => ({
@@ -9,6 +13,10 @@ vi.mock('../store', () => ({
     language: 'en',
     setLanguage: vi.fn(),
     resetProgress: vi.fn(),
+    user: null,
+    login: mockLogin,
+    register: mockRegister,
+    logout: mockLogout,
   }),
 }));
 
@@ -20,5 +28,15 @@ describe('SettingsPage', () => {
   it('should render settings page', () => {
     render(<SettingsPage />);
     expect(screen.getByText('Settings')).toBeInTheDocument();
+    expect(screen.getByText('Google Firebase Cloud Sync')).toBeInTheDocument();
+  });
+
+  it('should toggle registration mode when button is clicked', () => {
+    render(<SettingsPage />);
+    
+    const toggleBtn = screen.getByText('Need an account? Register');
+    fireEvent.click(toggleBtn);
+    
+    expect(screen.getByText('Already have an account? Sign In')).toBeInTheDocument();
   });
 });
