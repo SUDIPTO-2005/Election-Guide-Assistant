@@ -9,13 +9,6 @@ import VisualChartsPage from './pages/VisualChartsPage';
 import SavedPage from './pages/SavedPage';
 import VoiceAssistantPage from './pages/VoiceAssistantPage';
 
-// Placeholder pages to ensure app loads
-const PlaceholderPage = ({ title }: { title: string }) => (
-  <div className="p-8">
-    <h1 className="text-3xl font-bold mb-4">{title}</h1>
-    <p>This module is under development.</p>
-  </div>
-);
 
 function App() {
   return (

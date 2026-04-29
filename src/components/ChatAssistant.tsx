@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Send, Mic, Volume2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import i18n from 'i18next';
 import { GoogleGenAI } from '@google/genai';
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;

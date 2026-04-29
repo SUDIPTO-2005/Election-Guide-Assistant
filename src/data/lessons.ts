@@ -312,7 +312,7 @@ export const lessons: Lesson[] = [
         correctAnswer: 1,
         explanation: 'Secrecy ensures that nobody can know how you voted, preventing intimidation.',
         category: 'privacy',
-        level: 'basic'
+        level: 'beginner'
       },
       {
         id: 'q2',
@@ -330,7 +330,7 @@ export const lessons: Lesson[] = [
         correctAnswer: 1,
         explanation: 'Physical barriers like compartments ensure that other people cannot see your choices.',
         category: 'privacy',
-        level: 'basic'
+        level: 'beginner'
       }
     ]
   },
@@ -349,7 +349,7 @@ export const lessons: Lesson[] = [
         correctAnswer: 1,
         explanation: 'Almost all countries require candidates to be citizens.',
         category: 'eligibility',
-        level: 'basic'
+        level: 'beginner'
       },
       {
         id: 'q2',
@@ -404,7 +404,7 @@ export const lessons: Lesson[] = [
         correctAnswer: 1,
         explanation: 'Diversifying sources helps you see different viewpoints and verify facts.',
         category: 'media',
-        level: 'basic'
+        level: 'beginner'
       }
     ]
   }
